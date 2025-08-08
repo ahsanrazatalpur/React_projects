@@ -1,0 +1,905 @@
+/* booking start */
+/* import React, { useState, useEffect } from 'react';
+import { FaBed } from 'react-icons/fa';
+import { useNotification } from '../components/NotificationContext'; // ✅ Notification hook
+
+const Booking = ({ bookings, onUpdateBooking, onRemoveGuest }) => {
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredBookings, setFilteredBookings] = useState([]);
+  const [editingBookingId, setEditingBookingId] = useState(null);
+  const [editedBookingData, setEditedBookingData] = useState({});
+  const { addNotification } = useNotification(); // ✅
+
+  const displayFields = [
+    { key: 'name', label: 'Guest Name', type: 'text' },
+    { key: 'fatherName', label: "Father's Name", type: 'text' },
+    { key: 'age', label: 'Age', type: 'number' },
+    { key: 'mobile', label: 'Mobile No.', type: 'text' },
+    { key: 'gmail', label: 'Gmail', type: 'email' },
+    { key: 'nic', label: 'NIC', type: 'text' },
+    { key: 'members', label: 'Members', type: 'number' },
+    { key: 'checkIn', label: 'Check-In', type: 'date' },
+    { key: 'checkOut', label: 'Check-Out', type: 'date' },
+    { key: 'room', label: 'Room', type: 'text' },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!bookings) return setFilteredBookings([]);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const query = searchQuery.toLowerCase();
+
+    const results = bookings.filter((booking) => {
+      const checkOutDate = new Date(booking.checkOut);
+      checkOutDate.setHours(0, 0, 0, 0);
+
+      const notPast = checkOutDate >= today;
+      const nameMatch = booking.name?.toLowerCase().includes(query);
+
+      const roomValue = typeof booking.room === 'string'
+        ? booking.room
+        : booking.room?.id || booking.room?.type || '';
+
+      const roomMatch = roomValue.toLowerCase().includes(query);
+
+      return notPast && (nameMatch || roomMatch);
+    });
+
+    setFilteredBookings(results);
+  }, [searchQuery, bookings, currentDateTime]);
+
+  const formatTimestamp = () => {
+    const now = new Date();
+    return `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+  };
+
+  const handleEditClick = (booking) => {
+    setEditingBookingId(booking.id);
+    setEditedBookingData({ ...booking });
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditedBookingData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveClick = () => {
+    onUpdateBooking(editedBookingData);
+    setEditingBookingId(null);
+    setEditedBookingData({});
+
+    const roomLabel = typeof editedBookingData.room === 'object'
+      ? editedBookingData.room?.id || editedBookingData.room?.type
+      : editedBookingData.room;
+
+    addNotification({
+      message: `Booking updated for ${editedBookingData.name} in Room ${roomLabel}`,
+      timestamp: formatTimestamp(),
+      type: 'update'
+    });
+  };
+
+  const handleCancelClick = () => {
+    setEditingBookingId(null);
+    setEditedBookingData({});
+  };
+
+  const handleRemoveBooking = (bookingId) => {
+    if (window.confirm("Are you sure you want to remove this guest?")) {
+      const booking = bookings.find(b => b.id === bookingId);
+      if (booking) {
+        const roomLabel = typeof booking.room === 'object'
+          ? booking.room?.id || booking.room?.type
+          : booking.room;
+
+        addNotification({
+          message: `Guest ${booking.name} has been removed from Room ${roomLabel}`,
+          timestamp: formatTimestamp(),
+          type: 'remove'
+        });
+
+        // You could also notify room status change here
+        addNotification({
+          message: `Room ${roomLabel} status changed to "Vacant"`,
+          timestamp: formatTimestamp(),
+          type: 'status'
+        });
+      }
+      if (onRemoveGuest) {
+        onRemoveGuest(bookingId);
+      }
+    }
+  };
+
+  const formattedDate = currentDateTime.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  const formattedTime = currentDateTime.toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+  });
+
+  const handleDownloadCSV = () => {
+    if (!bookings || !bookings.length) return;
+
+    const keys = [
+      'id', 'name', 'fatherName', 'age', 'mobile', 'gmail', 'nic',
+      'members', 'checkIn', 'checkOut', 'room'
+    ];
+
+    const headers = keys.map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(',');
+    const csvRows = bookings.map(booking => {
+      return keys.map(key => {
+        let val = booking[key];
+        if (key === 'room' && typeof val === 'object') {
+          val = val.id || val.type || 'N/A';
+        }
+        return `"${(val || 'N/A').toString().replace(/"/g, '""')}"`;
+      }).join(',');
+    });
+
+    const blob = new Blob([headers + '\n' + csvRows.join('\n')], {
+      type: 'text/csv;charset=utf-8;'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'all_booking_details.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white pt-1 pb-4 sm:pt-2 sm:pb-6 flex flex-col items-start font-sans md:w-full lg:w-[1030px] md:ml-[220px] lg:-mt-0 mt-10">
+      <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-5xl bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8 lg:p-10 border border-gray-700">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-between items-center mb-8 pb-4 border-b border-gray-700 gap-4">
+            <div className="text-center sm:text-left">
+              <p className="text-md sm:text-lg font-medium text-gray-400">{formattedDate}</p>
+              <p className="text-xl sm:text-2xl font-bold text-white">{formattedTime}</p>
+            </div>
+            <button onClick={handleDownloadCSV} className="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+              Download All Bookings CSV
+            </button>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-center text-white mb-6">All Booking Details</h2>
+          <div className="mb-8 flex justify-start">
+            <input
+              type="text"
+              placeholder="Search by Guest Name or Room..."
+              className="w-full sm:w-80 p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="space-y-6">
+            {filteredBookings.length > 0 ? (
+              filteredBookings.map((booking) => (
+                <div key={booking.id || `${booking.name}-${booking.checkIn}`} className="bg-gray-700 p-4 rounded-lg shadow-lg border border-gray-600">
+                  {editingBookingId === booking.id ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {displayFields.map(field => (
+                        <div key={field.key} className="flex flex-col">
+                          <label className="text-sm font-medium text-gray-400 mb-1">{field.label}:</label>
+                          <input
+                            type={field.type}
+                            name={field.key}
+                            value={editedBookingData[field.key] || ''}
+                            onChange={handleEditChange}
+                            className="p-2 rounded bg-gray-600 border border-gray-500 text-white"
+                          />
+                        </div>
+                      ))}
+                      <div className="col-span-full flex flex-wrap justify-end gap-3 mt-4">
+                        <button onClick={handleSaveClick} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Save</button>
+                        <button onClick={handleCancelClick} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center mb-4 gap-2">
+                        <h3 className="text-xl font-bold text-white">
+                          {booking.name || 'N/A'} - {typeof booking.room === 'object' ? booking.room?.id || booking.room?.type : booking.room}
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          <button onClick={() => handleEditClick(booking)} className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg">Edit</button>
+                          <button onClick={() => handleRemoveBooking(booking.id)} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">Remove Guest</button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {displayFields.map(field => (
+                          <div key={field.key} className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-400">{field.label}:</span>
+                            <span className="text-base text-white">
+                              {field.key === 'room'
+                                ? (typeof booking.room === 'object'
+                                  ? booking.room?.id || booking.room?.type || 'N/A'
+                                  : booking.room || 'N/A')
+                                : booking[field.key] || 'N/A'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-400 text-lg">No active bookings found.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Booking;
+
+rooms
+import { useEffect, useState } from 'react';
+import roomData from './RoomData';
+import BookingModal from './BookingModal';
+import { useNotification } from './NotificationContext';
+import {
+  FaBed,
+  FaCheckCircle,
+} from 'react-icons/fa';
+
+const Rooms = ({ bookings, onBookingConfirmed }) => {
+  const [rooms, setRooms] = useState(roomData);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [viewingRoom, setViewingRoom] = useState(null);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState({
+    type: '',
+    status: '',
+    minPrice: '',
+    maxPrice: '',
+  });
+
+  const { addNotification } = useNotification();
+
+  const housekeepingStatuses = JSON.parse(localStorage.getItem('housekeepingStatuses')) || {};
+
+  const handleBook = (bookingDetails) => {
+    const newBooking = {
+      ...bookingDetails,
+      room: selectedRoom,
+      roomNumber: selectedRoom.id,
+      bookedAt: new Date().toISOString(),
+    };
+
+    onBookingConfirmed(newBooking);
+
+    addNotification(
+      `🛏️ Room #${selectedRoom.id} booked by ${bookingDetails.name?.trim() || 'a guest'}`,
+      'success'
+    );
+
+    setSelectedRoom(null);
+    setShowSuccessPopup(true);
+    setTimeout(() => setShowSuccessPopup(false), 3000);
+  };
+
+  const isRoomBooked = (roomId) => bookings.some((b) => b.room?.id === roomId);
+
+  const filteredRooms = rooms.filter((room) => {
+    const matchesSearch =
+      room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      room.id.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesType = filter.type ? room.type === filter.type : true;
+    const matchesMin = filter.minPrice ? room.price >= Number(filter.minPrice) : true;
+    const matchesMax = filter.maxPrice ? room.price <= Number(filter.maxPrice) : true;
+
+    const isBooked = isRoomBooked(room.id);
+    const isUnderMaintenance = housekeepingStatuses[room.id]?.isUnderMaintenance;
+
+    let matchesStatus = true;
+
+    if (filter.status === 'Available') {
+      matchesStatus = !isBooked && !isUnderMaintenance;
+    } else if (filter.status === 'Booked') {
+      matchesStatus = isBooked;
+    } else if (filter.status === 'Maintenance') {
+      matchesStatus = isUnderMaintenance;
+    }
+
+    return matchesSearch && matchesType && matchesStatus && matchesMin && matchesMax;
+  });
+
+  return (
+    <div className="flex flex-col w-full p-4 space-y-6 ml-0 md:ml-[240px] overflow-x-hidden -mt-8">
+      {showSuccessPopup && (
+        <div className="fixed left-1/2 -translate-x-1/2 z-[100] w-full max-w-sm top-4">
+          <div className="bg-green-600 text-white px-6 py-4 rounded-xl shadow-lg flex items-center space-x-3 border border-green-500">
+            <FaCheckCircle className="text-white text-2xl" />
+            <span className="text-base font-semibold">Booking Confirmed!</span>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 md:mt-6 flex items-center gap-2 text-white text-2xl md:text-3xl font-bold justify-center md:justify-start">
+        <FaBed className="text-blue-400" />
+        <h2>Our Rooms</h2>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between mb-4">
+        <input
+          type="text"
+          placeholder="Search by Room ID or Guest Name"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="p-2 border rounded w-full sm:w-1/2 mb-2 sm:mb-0"
+        />
+
+        <div className="bg-white dark:bg-gray-800 shadow p-3 rounded-lg text-sm text-gray-800 dark:text-white w-full sm:w-auto sm:ml-4 flex gap-4 justify-between sm:justify-start md:mr-[300px]">
+          <div>
+            <p className="font-semibold">Total Rooms</p>
+            <p>{rooms.length}</p>
+          </div>
+          <div>
+            <p className="font-semibold text-red-600">Booked</p>
+            <p>{activebookings.length}</p>
+          </div>
+          <div>
+            <p className="font-semibold text-green-600">Available</p>
+            <p>
+              {rooms.filter(
+                (room) =>
+                  !isRoomBooked(room.id) &&
+                  !housekeepingStatuses[room.id]?.isUnderMaintenance
+              ).length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+    
+      <div className="flex flex-col md:flex-row md:items-center gap-3 flex-wrap bg-white dark:bg-[#1E293B] rounded-lg shadow p-4 w-full md:w-[800px]">
+        <select
+          value={filter.type}
+          onChange={(e) => setFilter({ ...filter, type: e.target.value })}
+          className="p-2 rounded bg-gray-100 dark:bg-[#334155] text-sm w-full sm:w-auto cursor-pointer"
+        >
+          <option value="">All Types</option>
+          <option value="Single">Single</option>
+          <option value="Double">Double</option>
+          <option value="Suite">Suite</option>
+        </select>
+
+        <select
+          value={filter.status}
+          onChange={(e) => setFilter({ ...filter, status: e.target.value })}
+          className="p-2 rounded bg-gray-100 dark:bg-[#334155] text-sm w-full sm:w-auto cursor-pointer"
+        >
+          <option value="">All Status</option>
+          <option value="Available">Available</option>
+          <option value="Booked">Booked</option>
+          <option value="Maintenance">Maintenance</option>
+        </select>
+
+        <input
+          type="number"
+          placeholder="Min Price"
+          value={filter.minPrice}
+          onChange={(e) => setFilter({ ...filter, minPrice: e.target.value })}
+          className="p-2 rounded bg-gray-100 dark:bg-[#334155] text-sm w-full sm:w-auto"
+        />
+        <input
+          type="number"
+          placeholder="Max Price"
+          value={filter.maxPrice}
+          onChange={(e) => setFilter({ ...filter, maxPrice: e.target.value })}
+          className="p-2 rounded bg-gray-100 dark:bg-[#334155] text-sm w-full sm:w-auto"
+        />
+
+        <button
+          onClick={() =>
+            setFilter({ type: '', status: '', minPrice: '', maxPrice: '' })
+          }
+          className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition cursor-pointer"
+        >
+          Reset Filters
+        </button>
+      </div>
+
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 w-full md:w-[950px]">
+        {filteredRooms.map((room) => {
+          const isBooked = isRoomBooked(room.id);
+          const isUnderMaintenance = housekeepingStatuses[room.id]?.isUnderMaintenance;
+          const canBook = !isBooked && !isUnderMaintenance;
+
+          const status = isUnderMaintenance
+            ? 'Maintenance'
+            : isBooked
+            ? 'Booked'
+            : 'Available';
+
+          const statusColor =
+            status === 'Booked'
+              ? 'text-red-500'
+              : status === 'Maintenance'
+              ? 'text-orange-400'
+              : 'text-green-400';
+
+          const buttonColor =
+            status === 'Booked'
+              ? 'bg-red-500 cursor-not-allowed'
+              : status === 'Maintenance'
+              ? 'bg-orange-500 cursor-not-allowed'
+              : 'bg-green-500 hover:bg-green-700 cursor-pointer';
+
+          return (
+            <div
+              key={room.id}
+              className="bg-[#1E293B] rounded-lg border border-gray-700 overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
+            >
+              <img
+                src={room.images[0]}
+                alt={room.title}
+                className="w-full h-32 sm:h-36 object-cover"
+              />
+              <div className="p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white truncate">{room.title}</h3>
+                  <span className={`text-[10px] font-semibold ${statusColor}`}>
+                    {status}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400 line-clamp-2">{room.description}</p>
+                <div className="text-[10px] text-gray-400 space-y-[2px]">
+                  <p>
+                    Room ID: <span className="text-white">{room.id}</span>
+                  </p>
+                  <p>
+                    Type: <span className="text-white">{room.type}</span>
+                  </p>
+                  <p>
+                    Price: <span className="text-white">${room.price}/night</span>
+                  </p>
+                </div>
+                <div className="flex space-x-1 pt-2">
+                  <button
+                    className={`flex-1 text-white text-[11px] px-2 py-[6px] rounded transition ${buttonColor}`}
+                    onClick={() => canBook && setSelectedRoom(room)}
+                    disabled={!canBook}
+                  >
+                    {status === 'Available' ? 'Book' : status}
+                  </button>
+                  <button
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-2 py-[6px] rounded transition cursor-pointer"
+                    onClick={() => setViewingRoom(room)}
+                  >
+                    View
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {selectedRoom && (
+        <BookingModal
+          room={selectedRoom}
+          onClose={() => setSelectedRoom(null)}
+          onBookingConfirmed={handleBook}
+        />
+      )}
+
+      {viewingRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-[#1E293B] border border-gray-700 p-6 rounded-lg max-w-3xl w-full mx-4 relative overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white">
+                Room Details: {viewingRoom.title}
+              </h2>
+              <button
+                className="text-red-400 hover:text-red-600 font-bold text-xl cursor-pointer"
+                onClick={() => setViewingRoom(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <img
+                src={viewingRoom.images[0]}
+                alt={viewingRoom.title}
+                className="w-full h-64 object-cover rounded-lg"
+              />
+              <div className="text-gray-300 text-sm space-y-2">
+                <p><strong>ID:</strong> {viewingRoom.id}</p>
+                <p><strong>Type:</strong> {viewingRoom.type}</p>
+                <p><strong>Price:</strong> ${viewingRoom.price}/night</p>
+                <p><strong>Status:</strong> {isRoomBooked(viewingRoom.id) ? 'Booked' : housekeepingStatuses[viewingRoom.id]?.isUnderMaintenance ? 'Maintenance' : 'Available'}</p>
+                <p><strong>Description:</strong> {viewingRoom.description}</p>
+                <p><strong>Amenities:</strong> {viewingRoom.amenities?.join(', ') || 'N/A'}</p>
+                <p><strong>Guests:</strong> Max {viewingRoom.maxGuests}</p>
+                <p><strong>Size:</strong> {viewingRoom.size} sq ft</p>
+                <p><strong>Beds:</strong> {viewingRoom.beds}</p>
+              </div>
+            </div>
+            <div className="text-right mt-4">
+              <button
+                onClick={() => setViewingRoom(null)}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Rooms;
+
+
+
+*/
+
+
+/* booking end */
+
+
+
+/* room status start */
+/* // src/components/RoomStatus.jsx
+import React, { useState, useEffect } from 'react';
+import { FaBroom, FaCheckCircle, FaTimesCircle, FaTools } from 'react-icons/fa';
+import roomData from './RoomData';
+
+const RoomStatus = ({ bookings }) => {
+  const [housekeepingStatuses, setHousekeepingStatuses] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+
+  useEffect(() => {
+    const savedStatuses = JSON.parse(localStorage.getItem('housekeepingStatuses')) || {};
+
+    const updatedStatuses = { ...savedStatuses };
+
+    roomData.forEach(room => {
+      if (!updatedStatuses[room.id]) {
+        const isBooked = bookings.some(b => b.room?.id === room.id);
+        updatedStatuses[room.id] = {
+          cleanlinessStatus: isBooked ? 'Dirty' : 'Clean',
+          lastCleaned: isBooked ? '' : new Date().toISOString().slice(0, 10),
+          isUnderMaintenance: false,
+        };
+      }
+    });
+
+    // ✅ Only update localStorage if something changed
+    if (JSON.stringify(updatedStatuses) !== JSON.stringify(savedStatuses)) {
+      localStorage.setItem('housekeepingStatuses', JSON.stringify(updatedStatuses));
+    }
+
+    setHousekeepingStatuses(updatedStatuses);
+  }, [bookings]);
+
+  const saveStatuses = (updatedStatuses) => {
+    localStorage.setItem('housekeepingStatuses', JSON.stringify(updatedStatuses));
+    setHousekeepingStatuses(updatedStatuses);
+  };
+
+  const getRoomCombinedStatus = (room) => {
+    const status = housekeepingStatuses[room.id] || {};
+    const isBooked = bookings.some(b => b.room?.id === room.id);
+
+    if (status.isUnderMaintenance) {
+      return { label: 'Maintenance', color: 'bg-yellow-100 text-yellow-800' };
+    }
+
+    return isBooked
+      ? { label: 'Booked', color: 'bg-red-100 text-red-800' }
+      : { label: 'Available', color: 'bg-green-100 text-green-800' };
+  };
+
+  const handleStatusChange = (roomId, type) => {
+    const prev = housekeepingStatuses[roomId] || {};
+    const updated = { ...prev };
+
+    if (type === 'Maintenance') {
+      updated.isUnderMaintenance = !prev.isUnderMaintenance;
+      if (!updated.isUnderMaintenance) {
+        updated.cleanlinessStatus = 'Dirty';
+      }
+    } else {
+      updated.cleanlinessStatus = type;
+      updated.isUnderMaintenance = false;
+      if (type === 'Clean') {
+        updated.lastCleaned = new Date().toISOString().slice(0, 10);
+      }
+    }
+
+    const newStatuses = {
+      ...housekeepingStatuses,
+      [roomId]: updated,
+    };
+
+    saveStatuses(newStatuses);
+  };
+
+  const filteredRooms = roomData
+    .map(room => {
+      const localStatus = housekeepingStatuses[room.id] || {};
+      const combinedStatus = getRoomCombinedStatus(room);
+
+      return {
+        ...room,
+        status: combinedStatus,
+        cleanliness: localStatus.cleanlinessStatus || 'Clean',
+        lastCleaned: localStatus.lastCleaned || 'N/A',
+        isUnderMaintenance: localStatus.isUnderMaintenance || false,
+      };
+    })
+    .filter(room => {
+      const matchesSearch =
+        room.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.type.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesFilter = filterStatus
+        ? room.status.label === filterStatus || room.cleanliness === filterStatus
+        : true;
+
+      return matchesSearch && matchesFilter;
+    });
+
+  return (
+    <div className="flex-1 min-h-screen bg-[#0F172A] text-white p-4 md:p-6 ml-0 md:ml-[223px] -mt-4 w-[1020px]">
+      <div className="w-full mx-auto max-w-screen-xl">
+        <div className="bg-gray-800 rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8 border border-gray-700">
+          <div className="flex items-center gap-2 text-white text-2xl md:text-3xl font-bold mb-6">
+            <FaBroom className="text-pink-400" />
+            <h2>Room Status</h2>
+          </div>
+
+        
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <input
+              type="text"
+              placeholder="Search by Room ID or Type..."
+              className="w-full md:w-1/2 p-2 rounded-md bg-gray-700 border border-gray-600 text-white text-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full md:w-auto p-2 rounded-md bg-gray-700 border border-gray-600 text-white text-sm"
+            >
+              <option value="">All Statuses</option>
+              <option value="Clean">Clean</option>
+              <option value="Dirty">Dirty</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Available">Available</option>
+              <option value="Booked">Booked</option>
+            </select>
+          </div>
+
+          
+          <div className="overflow-x-auto rounded-lg border border-gray-700">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead className="bg-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Room ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Cleanliness</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Last Cleaned</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-gray-800 divide-y divide-gray-700">
+                {filteredRooms.length ? (
+                  filteredRooms.map(room => (
+                    <tr key={room.id} className="hover:bg-gray-700">
+                      <td className="px-4 py-3 text-sm">{room.id}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{room.type}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${room.status.color}`}>
+                          {room.status.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{room.cleanliness}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{room.lastCleaned}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => handleStatusChange(room.id, 'Clean')}
+                            className="px-2 py-1 bg-green-600 hover:bg-green-700 text-xs text-white rounded flex items-center gap-1"
+                          >
+                            <FaCheckCircle /> Clean
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(room.id, 'Dirty')}
+                            className="px-2 py-1 bg-red-600 hover:bg-red-700 text-xs text-white rounded flex items-center gap-1"
+                          >
+                            <FaTimesCircle /> Dirty
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(room.id, 'Maintenance')}
+                            className={`px-2 py-1 text-xs text-white rounded flex items-center gap-1 ${
+                              room.isUnderMaintenance
+                                ? 'bg-gray-500'
+                                : 'bg-yellow-600 hover:bg-yellow-700'
+                            }`}
+                          >
+                            <FaTools /> {room.isUnderMaintenance ? 'Exit' : 'Maintenance'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center py-4 text-gray-400">
+                      No rooms found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RoomStatus;
+
+ room status end  */
+
+
+
+
+ /* box 
+ 
+        {/* <div className="bg-white dark:bg-gray-800 shadow p-3 rounded-lg text-sm text-gray-800 dark:text-white w-full sm:w-auto sm:ml-4 flex gap-4 justify-between sm:justify-start md:mr-[300px]">
+          <div>
+            <p className="font-semibold">Total Rooms</p>
+            <p>{rooms.length}</p>
+          </div>
+          <div>
+            <p className="font-semibold text-red-600">Booked</p>
+            <p>{bookings.length}</p>
+          </div>
+          <div>
+            <p className="font-semibold text-green-600">Available</p>
+            <p>
+              {rooms.filter(
+                (room) =>
+                  !isRoomBooked(room.id) &&
+                  !housekeepingStatuses[room.id]?.isUnderMaintenance
+              ).length}
+            </p>
+          </div>
+        </div>*/
+
+
+
+        /* reports */
+
+
+        /* 
+        // src/components/Reports.jsx
+import React from 'react';
+import { FaChartBar, FaMoneyBillWave, FaUsers } from 'react-icons/fa';
+import roomData from './RoomData';
+
+const Reports = ({ bookings }) => {
+    const totalRooms = roomData.length;
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Calculate occupied rooms for today
+    const occupiedToday = bookings.filter(b => 
+        b.checkIn <= today && b.checkOut >= today
+    ).length;
+
+    // Calculate total bookings and revenue with a null check
+    const totalBookings = bookings.length;
+    const totalRevenue = bookings.reduce((sum, booking) => 
+        // Add a check to ensure booking.room exists before accessing its properties
+        booking.room ? sum + booking.room.price : sum, 0
+    );
+
+    // Calculate occupancy rate
+    const occupancyRateToday = totalRooms > 0 
+        ? ((occupiedToday / totalRooms) * 100).toFixed(2) 
+        : 0;
+
+    // Calculate average daily rate (ADR)
+    const adr = totalBookings > 0 
+        ? (totalRevenue / totalBookings).toFixed(2) 
+        : 0;
+
+    // Calculate most popular room type with a null check and improved logic
+    const roomTypeCounts = bookings.reduce((counts, booking) => {
+        if (booking.room) {
+            counts[booking.room.type] = (counts[booking.room.type] || 0) + 1;
+        }
+        return counts;
+    }, {});
+    
+    // Corrected logic to find the key with the highest value
+    const popularRoomType = Object.keys(roomTypeCounts).length > 0
+        ? Object.keys(roomTypeCounts).reduce((a, b) => 
+            roomTypeCounts[a] > roomTypeCounts[b] ? a : b
+        )
+        : 'N/A';
+
+    return (
+        <div className="p-4 sm:p-6 bg-[#0F172A] text-white ml-0 md:ml-[240px] lg:mt-0 mt-8">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 flex items-center gap-2 sm:gap-3 text-blue-400">
+                <FaChartBar />
+                Hotel Reports
+            </h1>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg border border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg sm:text-xl font-semibold">Occupancy Rate</h2>
+                        <FaChartBar className="text-blue-400 text-2xl sm:text-3xl" />
+                    </div>
+                    <div className="mt-2 sm:mt-4">
+                        <p className="text-3xl sm:text-4xl font-bold text-blue-300">{occupancyRateToday}%</p>
+                        <p className="text-xs sm:text-sm text-gray-400">of rooms occupied today</p>
+                    </div>
+                </div>
+
+                <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg border border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg sm:text-xl font-semibold">Total Revenue</h2>
+                        <FaMoneyBillWave className="text-green-400 text-2xl sm:text-3xl" />
+                    </div>
+                    <div className="mt-2 sm:mt-4">
+                        <p className="text-3xl sm:text-4xl font-bold text-green-300">${totalRevenue.toFixed(2)}</p>
+                        <p className="text-xs sm:text-sm text-gray-400">from all bookings</p>
+                    </div>
+                </div>
+
+                <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg border border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg sm:text-xl font-semibold">Avg. Daily Rate (ADR)</h2>
+                        <FaMoneyBillWave className="text-yellow-400 text-2xl sm:text-3xl" />
+                    </div>
+                    <div className="mt-2 sm:mt-4">
+                        <p className="text-3xl sm:text-4xl font-bold text-yellow-300">${adr}</p>
+                        <p className="text-xs sm:text-sm text-gray-400">per booking</p>
+                    </div>
+                </div>
+
+                <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg border border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg sm:text-xl font-semibold">Guest Insights</h2>
+                        <FaUsers className="text-purple-400 text-2xl sm:text-3xl" />
+                    </div>
+                    <div className="mt-2 sm:mt-4">
+                        <p className="text-base font-medium text-white">Total Bookings:</p>
+                        <p className="text-xl sm:text-2xl font-bold text-purple-300">{totalBookings}</p>
+                        <p className="text-base font-medium text-white mt-2">Most Popular Room Type:</p>
+                        <p className="text-xl sm:text-2xl font-bold text-purple-300">{popularRoomType}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Reports; */
