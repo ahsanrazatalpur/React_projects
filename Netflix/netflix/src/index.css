@@ -1,0 +1,54 @@
+/* import React from "react";
+import "./App.css"
+import Navbar from "./components/Navbar";
+import HeroBanner from "./components/HeroBanner";
+import MovieRow from "./components/MovieRow";
+import Genres from "./components/Genres";
+import MovieSearch from "./components/MovieSearch";
+
+
+function App() {
+  // Example static movie images
+   const trendingMovies = [
+  // "https://image.tmdb.org/t/p/w500/rjkmN1dniUHVYAtwuV3Tji7FsDO.jpg", // Venom
+  // "https://image.tmdb.org/t/p/w500/6KErczPBROQty7QoIsaa6wJYXZi.jpg", // Soul
+  // "https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg", // Spirited Away
+  // "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg", // Avengers Infinity War
+  // "https://image.tmdb.org/t/p/w500/rjkmN1dniUHVYAtwuV3Tji7FsDO.jpg", // Jungle Cruise
+  // "https://image.tmdb.org/t/p/w500/rjkmN1dniUHVYAtwuV3Tji7FsDO.jpg", // Venom
+  // "https://image.tmdb.org/t/p/w500/6KErczPBROQty7QoIsaa6wJYXZi.jpg", // Soul
+  // "https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg", // Spirited Away
+  // "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg", // Avengers Infinity War
+  // "https://image.tmdb.org/t/p/w500/rjkmN1dniUHVYAtwuV3Tji7FsDO.jpg", // Jungle Cruise
+];
+
+
+   const actionMovies = [
+  //   "https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg",
+  //   "https://image.tmdb.org/t/p/w500/6KErczPBROQty7QoIsaa6wJYXZi.jpg",
+  //   "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
+  //   "https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg",
+  //   "https://image.tmdb.org/t/p/w500/rjkmN1dniUHVYAtwuV3Tji7FsDO.jpg",
+  //   "https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg",
+  //   "https://image.tmdb.org/t/p/w500/6KErczPBROQty7QoIsaa6wJYXZi.jpg",
+  //   "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
+  //   "https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg",
+  //   "https://image.tmdb.org/t/p/w500/rjkmN1dniUHVYAtwuV3Tji7FsDO.jpg",
+  ];
+
+  return (
+    <div className="bg-gray-900 min-h-screen">
+      <Navbar />
+      <div className="pt-16">
+        <HeroBanner />
+        <MovieRow title="Trending Now" movies={trendingMovies} />
+        <MovieRow title="Action Movies" movies={actionMovies} />
+        <Genres/>
+        
+        
+      </div>
+    </div>
+  );
+}
+
+export default App; */

@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Set full page black background and white text */
+html, body, #root {
+  background-color: #000000; /* pure black */
+  color: white;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: Arial, sans-serif;
+}
+
+/* Stylish Scrollbar */
+::-webkit-scrollbar {
+  height: 8px; /* Horizontal scrollbar height */
+  width: 8px; /* Vertical scrollbar width */
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e1e; /* Track color */
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ce0707, #b91c1c); /* Red gradient thumb */
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #d60303, #b91c1c); /* Hover effect */
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ef4444 #1e1e1e;
+}
